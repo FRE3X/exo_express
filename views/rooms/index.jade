@@ -1,0 +1,16 @@
+extends ../layout
+
+block content
+  p Welcome to room selection
+
+  ul
+    each room in rooms
+      li
+        a(href="/rooms/#{room}")
+          Room n°#{room}
+
+
+  p Créer une room
+
+  form(action="/rooms", method="POST")
+    button.btn.btn-large.btn-primary(type="submit") Créer une nouvelle room
