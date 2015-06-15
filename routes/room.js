@@ -8,10 +8,10 @@ var debug =  require('debug')('cours:roomAction');
 /* GET home page. */
 router.post('/', function(req, res) {
   client.incr('room_id', function(err, replies){
-    client.sadd('rooms_list', replies, redis.print)
+    client.sadd('rooms_list', replies, function(){
+      res.redirect('/rooms');
+    });
   });
-
-  res.redirect('/rooms');
 });
 
 router.get('/', function(req, res) {
