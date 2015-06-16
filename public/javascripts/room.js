@@ -25,27 +25,40 @@ window.onload = function() {
       clicked  = null,
       callTime = 0,
       interval = null,
-      render   = true;
+      render   = true,
+      socket   = io();
 
-  var drawCircle = function(e) {
+  var drawCircle       = function(color, length, x, y) {
+    ctx.beginPath();
+    ctx.arc(x, y, length, 0, Math.PI*2, true);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.closePath();
+  }
+
+  var drawRandomCircle = function(e) {
     if(!clicked || !render)
       return false;
 
-    var randomColor  =  rainbow(20, callTime++);// '#'+Math.floor(Math.random()*16777215).toString(16);
+    var randomColor  = rainbow(20, callTime++);// '#'+Math.floor(Math.random()*16777215).toString(16);
     var randomLength = Math.floor(Math.random() * (40 - 5)) + 5;
 
-    console.log(e);
-
-    ctx.beginPath();
-    ctx.arc(e.offsetX, e.offsetY, randomLength, 0, Math.PI*2, true);
-    ctx.fillStyle = randomColor;
-    ctx.fill();
-    ctx.closePath();
     render = false;
+
+    socket.emit('draw_circle', { color: randomColor, length: randomLength, x: e.offsetX, y: e.offsetY, id: room_id });
   }
 
-  canvas.addEventListener("click", drawCircle, false);
-  canvas.addEventListener("mousemove", drawCircle, false);
+  socket.on( room_id + '_draw_circle', function(attrs){
+    drawCircle(attrs['color'], attrs['length'], attrs['x'], attrs['y']);
+  })
+
+  canvas.addEventListener("click", function(e){
+    clicked=true;
+    render = true;
+    drawRandomCircle(e);
+    clicked = false;
+  }, false);
+  canvas.addEventListener("mousemove", drawRandomCircle, false);
   canvas.addEventListener("mousedown", function(){
     clicked  = true;
     interval = setInterval( function(){
