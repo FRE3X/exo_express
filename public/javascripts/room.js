@@ -19,6 +19,8 @@ function rainbow(numOfSteps, step) {
   return (c);
 }
 
+var randomColor  = rainbow(20, Math.floor(Math.random()*21));
+
 window.onload = function() {
   var canvas   = document.getElementById("draw"),
       ctx      = canvas.getContext('2d'),
@@ -27,6 +29,8 @@ window.onload = function() {
       interval = null,
       render   = true,
       socket   = io();
+
+  socket.emit( 'join_room', room_id);
 
   var drawCircle       = function(color, length, x, y) {
     ctx.beginPath();
@@ -39,8 +43,6 @@ window.onload = function() {
   var drawRandomCircle = function(e) {
     if(!clicked || !render)
       return false;
-
-    var randomColor  = rainbow(20, callTime++);// '#'+Math.floor(Math.random()*16777215).toString(16);
     var randomLength = Math.floor(Math.random() * (40 - 5)) + 5;
 
     render = false;
@@ -48,9 +50,17 @@ window.onload = function() {
     socket.emit('draw_circle', { color: randomColor, length: randomLength, x: e.offsetX, y: e.offsetY, id: room_id });
   }
 
-  socket.on( room_id + '_draw_circle', function(attrs){
+  socket.on('game_end', function(attrs){
+    var colorThief = new ColorThief();
+
+    var winner = colorThief.getColor(document.getElementById('draw'));
+
+    document.getElementById('winner').innerHTML = '<div style="display: inline-block; width: 30px; height: 30px; background-color: rgb(' + winner.join(',') +')"></div> est le gagnant'
+  });
+
+  socket.on('draw_circle', function(attrs){
     drawCircle(attrs['color'], attrs['length'], attrs['x'], attrs['y']);
-  })
+  });
 
   canvas.addEventListener("click", function(e){
     clicked=true;

@@ -7,6 +7,9 @@
 var app = require('../app');
 var debug = require('debug')('cours:server');
 var http = require('http');
+var _ = require('lodash');
+
+var rooms = []
 
 
 /**
@@ -24,9 +27,48 @@ var server = http.createServer(app);
 var io     = require('socket.io')(server);
 
 io.on('connection', function(socket){
-  debug(io.sockets);
+  socket.on('join_room', function(id){
+    var currentRoom = _.findWhere(rooms, {id: id});
+
+    if ( !currentRoom ) {
+      debug("Creating new room");
+      rooms.push({ id: id, players: [socket.id], started: true });
+    } else {
+      debug("Add new player to existing room with socketId ");
+      if (currentRoom.players > 2 ) {
+        debug('room is full');
+        socket.emit('room_full');
+        return;
+      }
+
+      debug('pushing socket');
+      currentRoom['players'].push(socket.id);
+    }
+
+    if (currentRoom && currentRoom['players'].length == 2 )  {
+      debug("Start the game finishing it in 30s");
+      currentRoom['started'] = true;
+
+      setTimeout(function(){
+        currentRoom['started'] = false;
+        _.each(currentRoom['players'], function(socketId){
+          _.findWhere(io.sockets.sockets, {id: socketId}).emit('game_end');
+        });
+        rooms = _.reject(rooms, {id: id});
+
+      }, 30000);
+    }
+  });
+
   socket.on('draw_circle', function(attrs){
-    io.sockets.emit(attrs['id'] + '_draw_circle', attrs);
+    var currentRoom = _.findWhere(rooms, {id: attrs['id']});
+
+    if (!currentRoom)            { socket.emit("wait_player_2"); return; }
+    if (!currentRoom['started']) { socket.emit("game_finished"); return; }
+
+    _.each(currentRoom['players'], function(socketId){
+      _.findWhere(io.sockets.sockets, {id: socketId}).emit('draw_circle', attrs);
+    });
   })
 });
 
