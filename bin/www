@@ -32,7 +32,7 @@ io.on('connection', function(socket){
 
     if ( !currentRoom ) {
       debug("Creating new room");
-      rooms.push({ id: id, players: [socket.id], started: true });
+      rooms.push({ id: id, players: [socket.id], started: false, finished: false });
     } else {
       debug("Add new player to existing room with socketId ");
       if (currentRoom.players > 2 ) {
@@ -50,9 +50,13 @@ io.on('connection', function(socket){
       currentRoom['started'] = true;
 
       setTimeout(function(){
-        currentRoom['started'] = false;
+        currentRoom['finished'] = true;
+        
         _.each(currentRoom['players'], function(socketId){
-          _.findWhere(io.sockets.sockets, {id: socketId}).emit('game_end');
+          var socket = _.findWhere(io.sockets.sockets, {id: socketId})
+          if (socket) {
+            socket.emit('game_end');
+          }
         });
         rooms = _.reject(rooms, {id: id});
 
@@ -63,8 +67,8 @@ io.on('connection', function(socket){
   socket.on('draw_circle', function(attrs){
     var currentRoom = _.findWhere(rooms, {id: attrs['id']});
 
-    if (!currentRoom)            { socket.emit("wait_player_2"); return; }
-    if (!currentRoom['started']) { socket.emit("game_finished"); return; }
+    if (!currentRoom || currentRoom['finished']) { socket.emit("game_finished"); return; }
+    if (!currentRoom['started'] )                { socket.emit("wait_player_2"); return; }
 
     _.each(currentRoom['players'], function(socketId){
       _.findWhere(io.sockets.sockets, {id: socketId}).emit('draw_circle', attrs);
